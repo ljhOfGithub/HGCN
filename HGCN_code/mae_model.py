@@ -96,20 +96,23 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
             self.pos_embed = get_sinusoid_encoding_table(num_patches, embed_dim)
 
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        #最终，列表 dpr 就包含了从 0 到 drop_path_rate 的 depth 个均匀间隔的数值。这个列表可能用于后续的操作，例如在 Stochastic Depth 算法中使用，用于控制网络中某些层的丢弃概率。
         self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer,
                 init_values=init_values)
             for i in range(depth)])
+        #通过使用 nn.ModuleList，我们可以将多个自注意力块堆叠在一起，并按顺序调用它们来构建一个深度的自注意力模型。
         self.norm =  norm_layer(embed_dim)
+        #在这里，self.norm 的作用是对输入特征进行规范化，确保输入特征具有统一的分布和范围。
         self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-
+        #self.head 作为网络的输出层，根据 num_classes 的取值，可能是一个用于分类的线性层，也可能是一个恒等映射。
         if use_learnable_pos_emb:
             trunc_normal_(self.pos_embed, std=.02)
 
         # trunc_normal_(self.cls_token, std=.02)
-        self.apply(self._init_weights)
+        self.apply(self._init_weights)#对所有子模块调用初始化函数
 
 
     def _init_weights(self, m):
@@ -120,6 +123,7 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+    #这个函数通过遍历网络的所有子模块 m，检查是否为线性层 (nn.Linear) 或 Layer Normalization 层 (nn.LayerNorm)，然后分别对其进行不同的初始化操作。        
 
     def get_num_layers(self):
         return len(self.blocks)

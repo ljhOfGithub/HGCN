@@ -456,7 +456,8 @@ class fusion_model_mae_2(nn.Module):
         self.norm_cli = LayerNorm(out_classes//4)
         self.relu = torch.nn.ReLU() 
         self.dropout=nn.Dropout(p=dropout)
-
+#该模型的主要结构是由图神经网络（GNN）和预训练的视觉Transformer组成，并通过全局注意力机制和混合块来融合不同的模态信息。
+#同时，该模型还包含线性层、层标准化层和ReLU激活函数等组件，用于增强网络的表现和泛化能力。最终，该模型可用于处理多模态数据，并进行融合和特征提取，以适用于医疗影像识别等任务。
 
     def forward(self,all_thing,train_use_type=None,use_type=None,in_mask=[],mix=False):
 
@@ -620,13 +621,4 @@ class fusion_model_mae_2(nn.Module):
         one_x = torch.mean(multi_x,dim=0)
    
         return (one_x,multi_x),save_fea,(att_2,att_3),fea_dict  
-
-
-
-
-
-
-
-
-
-
+#综上所述，该fusion_model_mae_2模型中的forward函数实现了对多模态输入数据的融合和特征提取，并得到最终的全局融合特征，用于后续的任务。

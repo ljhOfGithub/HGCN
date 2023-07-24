@@ -136,6 +136,7 @@ class Block(nn.Module):
 
 def get_sinusoid_encoding_table(n_position, d_hid): 
     ''' Sinusoid position encoding table ''' 
+    #Sinusoid position encoding table（正弦位置编码表）是 Transformer 中用于编码序列位置信息的一种方法。
     # TODO: make it with torch instead of numpy 
     def get_position_angle_vec(position): 
         return [position / np.power(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)] 

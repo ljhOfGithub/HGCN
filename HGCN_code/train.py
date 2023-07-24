@@ -44,11 +44,11 @@ def prediction(all_data,v_model,val_id,patient_and_time,patient_sur_type,args):
 
             graph = all_data[id].to(device)
             if args.train_use_type != None:
-                use_type_eopch = args.train_use_type
+                use_type_eopch = args.train_use_type#选择模态
             else:
                 use_type_eopch = graph.data_type
             out_pre,out_fea,out_att,_ = v_model(graph,args.train_use_type,use_type_eopch,mix=args.mix)
-            lbl_pred = out_pre[0]
+            lbl_pred = out_pre[0]#lbl表示label
 
             survtime_all.append(patient_and_time[id])
             status_all.append(patient_sur_type[id])
@@ -89,7 +89,7 @@ def prediction(all_data,v_model,val_id,patient_and_time,patient_sur_type,args):
     return loss.item(), val_ci_, val_ci_img_, val_ci_rna_, val_ci_cli_
     
         
-def _neg_partial_log(prediction, T, E):
+def _neg_partial_log(prediction, T, E):#负部分对数似然
 
     current_batch_len = len(prediction)
     R_matrix_train = np.zeros([current_batch_len, current_batch_len], dtype=int)
@@ -106,7 +106,7 @@ def _neg_partial_log(prediction, T, E):
 
     exp_theta = torch.exp(theta)
     loss_nn = - torch.mean((theta - torch.log(torch.sum(exp_theta * train_R, dim=1))) * train_ystatus)
-
+    #论文中的7
     return loss_nn 
 
 
@@ -149,7 +149,7 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
     train_pre_time_cli = {}
     
     all_loss = 0.0 
-    mes_loss_of_mae = nn.MSELoss()
+    mes_loss_of_mae = nn.MSELoss()#设置均方误差函数
 
     
     mse_loss_of_mae = 0.0
@@ -207,7 +207,7 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
                     lbl_pred_img_each = out_pre[1][use_type_eopch.index('img')]
                 else:
                     lbl_pred_img_each = torch.cat([lbl_pred_img_each, out_pre[1][use_type_eopch.index('img')]])
-            if 'rna' in use_type_eopch and len(args.train_use_type) != 1:
+            if 'rna' in use_type_eopch and len(args.train_use_type) != 1:#不止rna一种
                 train_pre_time_rna[id] = out_pre[1][use_type_eopch.index('rna')].cpu().detach().numpy()
                 survtime_rna.append(patient_and_time[id])
                 status_rna.append(patient_sur_type[id])            
@@ -472,7 +472,7 @@ def main(args):
                                dropout=drop_out_ratio,
                                train_type_num = len(args.train_use_type)
                                       ).to(device)
-
+                #设置训练模型，用于prediction()
             optimizer=Adam(model.parameters(),lr=lr,weight_decay=5e-4)
 
             

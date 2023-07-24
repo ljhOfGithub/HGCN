@@ -64,24 +64,28 @@ class my_GlobalAttention(torch.nn.Module):
     
 def trunc_normal_(tensor, mean=0., std=1.):
     __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
-    
-class PretrainVisionTransformerEncoder(nn.Module):
+    #对张量进行截断正态分布初始化，均值为 mean，标准差为 std，范围限制在 [-std, std]
+class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编码器
     """ Vision Transformer with support for patch or hybrid CNN input stage
+    视觉transformer支持patch或混合CNN输入阶段
     """
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=0, embed_dim=512, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None,
                  use_learnable_pos_emb=False,train_type_num=3):
+        #在自然语言处理中，Transformer 网络使用位置编码来帮助模型处理序列数据的位置信息。位置编码通常是一个固定的向量，其维度与输入序列的特征维度相同。在训练过程中，位置编码不会发生变化。
+        #而当 use_learnable_pos_emb 设置为 True 时，位置编码是可学习的，也就是说它的参数会在训练过程中被优化调整。这样做的好处是，模型可以根据数据自动学习到更适合任务的位置编码，而不是使用固定的编码。
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-
+#与其他模型维度保持一致
 #         self.patch_embed = PatchEmbed(
 #             img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
 #         num_patches = self.patch_embed.num_patches
 
         self.patch_embed = nn.Linear(embed_dim,embed_dim)
-        num_patches = train_type_num
+        #nn.Linear 是 PyTorch 中用于创建全连接层的类。它将输入张量的每个元素与权重矩阵相乘，并加上偏置项，生成输出张量。
+        num_patches = train_type_num#模态数
 
         # TODO: Add the cls token
         # self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))

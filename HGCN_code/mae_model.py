@@ -131,27 +131,27 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
     @torch.jit.ignore
     def no_weight_decay(self):
         return {'pos_embed', 'cls_token'}
-
+    #在这段代码中，no_weight_decay 是一个自定义的方法，用于返回不参与权重衰减（Weight Decay）的参数名称集合。
     def get_classifier(self):
         return self.head
 
     def reset_classifier(self, num_classes, global_pool=''):
         self.num_classes = num_classes
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-
+    #用于重新设置模型的分类器（head）。head 是模型的一个属性，它表示模型的分类器层。
     def forward_features(self, x, mask):
         x = self.patch_embed(x)
         
         # cls_tokens = self.cls_token.expand(batch_size, -1, -1) 
         # x = torch.cat((cls_tokens, x), dim=1)
         x = x + self.pos_embed.type_as(x).to(x.device).clone().detach()
-
+        #self.pos_embed.type_as(x).to(x.device).clone().detach() 得到一个新的位置编码矩阵，它与输入特征张量 x 数据类型一致且不具有梯度。然后，这个位置编码矩阵会与输入特征张量 x 相加，用于在输入特征中添加位置信息。
         B, _, C = x.shape
         x_vis = x[~mask].reshape(B, -1, C) # ~mask means visible
-
+        #目的是将原始张量 x 中被掩码 mask 选择出来的元素重新整理成一个新的三维张量
         for blk in self.blocks:
             x_vis = blk(x_vis)
-
+        #通过不断遍历 self.blocks 中的超图块，我们可以将输入的超图特征进行多次变换和处理，从而得到更丰富和有意义的特征表示。
         x_vis = self.norm(x_vis)
         return x_vis
 

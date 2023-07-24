@@ -470,29 +470,37 @@ class fusion_model_mae_2(nn.Module):
         x_img = all_thing.x_img
         x_rna = all_thing.x_rna
         x_cli = all_thing.x_cli
-
+        #提取多模态节点数据
         data_id=all_thing.data_id
         edge_index_img=all_thing.edge_index_image
         edge_index_rna=all_thing.edge_index_rna
         edge_index_cli=all_thing.edge_index_cli
-
+        #提取多模态超边数据
         
         save_fea = {}
-        fea_dict = {}
+        fea_dict = {}#存储特征数据
         num_img = len(x_img)
         num_rna = len(x_rna)
         num_cli = len(x_cli)      
                
             
-        att_2 = []
-        pool_x = torch.empty((0)).to(device)
+        att_2 = []#存储注意力分数
+        pool_x = torch.empty((0)).to(device)#存储池化后的数据
+        #这行代码创建了一个空的张量pool_x，并将其设备类型设置为当前设备（GPU或CPU）。
+        #torch.empty((0))创建一个形状为(0,)的张量，其中没有元素。这里使用(0,)表示张量没有任何元素。
         if 'img' in data_type:
             x_img = self.img_gnn_2(x_img,edge_index_img) 
             x_img = self.img_relu_2(x_img)   
             batch = torch.zeros(len(x_img),dtype=torch.long).to(device)
+            #创建长度为len(x_img)的全零Tensorbatch，用于存储每个节点所属的batch信息。
+            #这个零张量的目的是为了在后续计算中用于指定每个数据点所属的批次(batch)。在深度学习中，通常将数据分成小批次(batch)进行处理，这有助于加速计算和优化模型。在这里，batch张量将被用作一个标记，表示所有的x_img数据点都属于同一个批次。
+            #这样做是为了将整个x_img张量作为一个批次输入到my_GlobalAttention层中，以计算全局注意力。在计算过程中，每个数据点都会被分配一个与其对应的批次标记，以便进行全局注意力的计算。
             pool_x_img,att_img_2 = self.mpool_img(x_img,batch)
+            #对图像数据进行全局注意力池化操作，将池化后的结果存储在变量pool_x_img中。
+            #att_img_2是一个与x_img数据点数量相同的张量，表示每个数据点在全局注意力中的重要性。
             att_2.append(att_img_2)
             pool_x = torch.cat((pool_x,pool_x_img),0)
+            #将pool_x_img张量与之前的pool_x张量在维度0上进行拼接（合并）操作
         if 'rna' in data_type:
             x_rna = self.rna_gnn_2(x_rna,edge_index_rna) 
             x_rna = self.rna_relu_2(x_rna)   
@@ -509,10 +517,13 @@ class fusion_model_mae_2(nn.Module):
             pool_x = torch.cat((pool_x,pool_x_cli),0)
         
         fea_dict['mae_labels'] = pool_x
-
+        #将特征数据pool_x存储在字典fea_dict中，键为mae_labels。
 
         if len(train_use_type)>1:
+            #在该代码段中，首先检查train_use_type中是否有多个数据类型（图像、RNA或CLI）。
+            #如果有多个数据类型，那么分别处理每个数据类型。
             if use_type == train_use_type:
+                #如果当前处理的use_type与train_use_type相同，意味着当前处理的数据类型与训练数据类型一致
                 mae_x = self.mae(pool_x,mask).squeeze(0)
                 fea_dict['mae_out'] = mae_x
             else:

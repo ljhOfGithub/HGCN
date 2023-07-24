@@ -294,7 +294,7 @@ class PretrainVisionTransformer(nn.Module):
         self.pos_embed = get_sinusoid_encoding_table(train_type_num, decoder_embed_dim)
 
         trunc_normal_(self.mask_token, std=.02)
-
+    #该代码定义了一个包含编码器和解码器的视觉预训练模型，用于图像生成任务。编码器负责将图像编码为特征表示，解码器负责根据特征表示生成图像预测结果，并使用位置嵌入和掩码标记来帮助模型生成准确的图像预测结果。
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):

@@ -340,7 +340,8 @@ class PretrainVisionTransformer(nn.Module):
                 tmp_x[:,i] = x[:,Truth_n]
                 Truth_n += 1
         return tmp_x
-
+    #这个前向传播过程的目的是使用预训练的视觉 Transformer 模型对具有遮挡信息的图像进行重建。
+    #它通过 Encoder 编码可见部分的信息，并使用 Decoder 生成遮挡部分的预测。最后，通过重建过程，将预测的遮挡部分插入到正确的位置，得到完整的输出序列。
 
 
 def Mix_mlp(dim1):

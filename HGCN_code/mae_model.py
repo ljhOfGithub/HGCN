@@ -579,7 +579,7 @@ class fusion_model_mae_2(nn.Module):
             pool_x_cli,att_cli_3 = self.mpool_cli_2(x_cli,batch)
             att_3.append(att_cli_3)
             pool_x = torch.cat((pool_x,pool_x_cli),0) 
-            
+        #经过三个my_GlobalAttention模块的处理后，pool_x中保存了三个数据类型对应的处理后的特征。同时，att_3列表中存储了这三个数据类型对应的注意力权重。    
 
         
         x = pool_x
@@ -630,6 +630,6 @@ class fusion_model_mae_2(nn.Module):
             multi_x = torch.cat((multi_x,x_cli),0)  
             k+=1  
         one_x = torch.mean(multi_x,dim=0)
-   
+    #通过torch.mean函数在第0维上对multi_x进行求平均，得到最终的特征one_x。此时，one_x中包含了在输入数据x的不同数据类型上进行线性变换和池化后的特征。
         return (one_x,multi_x),save_fea,(att_2,att_3),fea_dict  
 #综上所述，该fusion_model_mae_2模型中的forward函数实现了对多模态输入数据的融合和特征提取，并得到最终的全局融合特征，用于后续的任务。

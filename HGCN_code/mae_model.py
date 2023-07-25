@@ -359,7 +359,7 @@ class MixerBlock(nn.Module):
         self.mix_mip_1 = Mix_mlp(dim1)
         self.mix_mip_2 = Mix_mlp(dim2)
         
-    def forward(self,x): 
+    def forward(self,x): #对应伪代码12-13行
         
         y = self.norm(x)
         y = y.transpose(0,1)
@@ -412,7 +412,7 @@ class fusion_model_mae_2(nn.Module):
     def __init__(self,in_feats,n_hidden,out_classes,dropout=0.3,train_type_num=3):
         super(fusion_model_mae_2,self).__init__() 
 
-        self.img_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes)         
+        self.img_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes) #对应伪代码2-4行        
         self.img_relu_2 = GNN_relu_Block(out_classes)  
         self.rna_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes)          
         self.rna_relu_2 = GNN_relu_Block(out_classes)      
@@ -421,7 +421,7 @@ class fusion_model_mae_2(nn.Module):
 #         TransformerConv
 
         att_net_img = nn.Sequential(nn.Linear(out_classes, out_classes//4), nn.ReLU(), nn.Linear(out_classes//4, 1))        
-        self.mpool_img = my_GlobalAttention(att_net_img)
+        self.mpool_img = my_GlobalAttention(att_net_img)#对应伪代码6-8行，使用softmax和mlp处理节点特征
 
         att_net_rna = nn.Sequential(nn.Linear(out_classes, out_classes//4), nn.ReLU(), nn.Linear(out_classes//4, 1))        
         self.mpool_rna = my_GlobalAttention(att_net_rna)        
@@ -442,7 +442,8 @@ class fusion_model_mae_2(nn.Module):
         
         
         self.mae = PretrainVisionTransformer(encoder_embed_dim=out_classes, decoder_num_classes=out_classes, decoder_embed_dim=out_classes, encoder_depth=1,decoder_depth=1,train_type_num=train_type_num)
-        self.mix = MixerBlock(train_type_num, out_classes)
+        #对应伪代码第10行
+        self.mix = MixerBlock(train_type_num, out_classes)#对应伪代码12-14行，使用转置，mlp，layernorm处理超边矩阵
         
         self.lin1_img = torch.nn.Linear(out_classes,out_classes//4)
         self.lin2_img = torch.nn.Linear(out_classes//4,1)        
@@ -499,7 +500,7 @@ class fusion_model_mae_2(nn.Module):
             #对图像数据进行全局注意力池化操作，将池化后的结果存储在变量pool_x_img中。
             #att_img_2是一个与x_img数据点数量相同的张量，表示每个数据点在全局注意力中的重要性。
             att_2.append(att_img_2)
-            pool_x = torch.cat((pool_x,pool_x_img),0)
+            pool_x = torch.cat((pool_x,pool_x_img),0)#对应伪代码15-17行
             #将pool_x_img张量与之前的pool_x张量在维度0上进行拼接（合并）操作
         if 'rna' in data_type:
             x_rna = self.rna_gnn_2(x_rna,edge_index_rna) 
@@ -516,7 +517,7 @@ class fusion_model_mae_2(nn.Module):
             att_2.append(att_cli_2)
             pool_x = torch.cat((pool_x,pool_x_cli),0)
         
-        fea_dict['mae_labels'] = pool_x
+        fea_dict['mae_labels'] = pool_x#这是最终完整的模态间信息
         #将特征数据pool_x存储在字典fea_dict中，键为mae_labels。
 
         if len(train_use_type)>1:
@@ -609,7 +610,7 @@ class fusion_model_mae_2(nn.Module):
             x_img = self.dropout(x_img)    
 
             x_img = self.lin2_img(x_img).unsqueeze(0) 
-            multi_x = torch.cat((multi_x,x_img),0)
+            multi_x = torch.cat((multi_x,x_img),0)#对应伪代码19-21行
             k+=1
         if 'rna' in data_type:
             x_rna = self.lin1_rna(x[k])
@@ -629,7 +630,7 @@ class fusion_model_mae_2(nn.Module):
             x_cli = self.lin2_rna(x_cli).unsqueeze(0) 
             multi_x = torch.cat((multi_x,x_cli),0)  
             k+=1  
-        one_x = torch.mean(multi_x,dim=0)
+        one_x = torch.mean(multi_x,dim=0)#对应伪代码23行
     #通过torch.mean函数在第0维上对multi_x进行求平均，得到最终的特征one_x。此时，one_x中包含了在输入数据x的不同数据类型上进行线性变换和池化后的特征。
         return (one_x,multi_x),save_fea,(att_2,att_3),fea_dict  
 #综上所述，该fusion_model_mae_2模型中的forward函数实现了对多模态输入数据的融合和特征提取，并得到最终的全局融合特征，用于后续的任务。

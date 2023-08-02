@@ -275,8 +275,8 @@ def main():
     # parser.add_argument('--slide_dir', type=str, default='/home/jupyter-ljh/data/mntdata/data0/LIU_shaojun/TCGA-BRCA/WSI/')    
     # parser.add_argument('--save_dir', type=str, default='/save_dir')
     parser.add_argument('--save_dir', type=str, default='/home/jupyter-ljh/data/mntdata/data0/LI_jihao/HGCN_BRCA')#如果是~/data则无法识别，不知道放到哪去了
-    # parser.add_argument('--exist_ok', action='store_true', default=False)
-    parser.add_argument('--exist_ok', action='store_true', default=True)
+    parser.add_argument('--exist_ok', action='store_true', default=False)
+    # parser.add_argument('--exist_ok', action='store_true', default=True)
     parser.add_argument('--patch_size', type=int, default=512)
     # parser.add_argument('--patch_size', type=int, default=128)
     parser.add_argument('--magnification', type=int, default=10, choices=[40, 20, 10, 5])

@@ -181,7 +181,7 @@ def run(args):
     model_final = model_final.to(device)
     model_final = nn.DataParallel(model_final)
 
-    model_final.load_state_dict(torch.load('KimiaNetPyTorchWeights.pth'))
+    model_final.load_state_dict(torch.load('/home/jupyter-ljh/data/mntdata/data0/LI_jihao/KimiaNet_Weights/KimiaNetPyTorchWeights.pth'))
 
 
     
@@ -215,13 +215,15 @@ def run(args):
         
     np_dir = save_dir / 'np'
     np_dir.mkdir(parents=True, exist_ok=True)
-        
+    import pdb
+    # pdb.set_trace()
     slide_filepath_list = sorted(list(Path(args.slide_dir).rglob(f'*{args.wsi_format}')))
     # if need filter files, add code here. example:
     # slide_filepath_list = [x for x in slide_filepath_list if str(x).find('DX1') != -1]
     num_slide = len(slide_filepath_list)
     
-    all_slide_name = joblib.load('use_slide.pkl')
+    # all_slide_name = joblib.load('use_slide.pkl')
+    all_slide_name = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/slide_id.pkl')
     
     print(f"Slide number: {num_slide}.\n")
     print(f"Start tiling ...")
@@ -229,13 +231,14 @@ def run(args):
     for slide_idx, slide_filepath in enumerate(slide_filepath_list):
         
         print(str(slide_filepath))
-        if str(slide_filepath).split('/')[-1].split('.')[0] in all_slide_name:
-
-            
+        # if str(slide_filepath).split('/')[-1].split('.')[0] in all_slide_name:
+        if str(slide_filepath).split('/')[-1] in all_slide_name:            
             if args.specify_filename:
                 filename = slide_filepath.stem[args.filename_l:]
             else:
                 filename = slide_filepath.stem
+            import pdb
+            pdb.set_trace()
             if (coord_dir / f'{filename}.json').exists() and not args.exist_ok:
                 print(f"{str(coord_dir / f'{filename}.json')} exists, skip!")
                 continue
@@ -267,10 +270,15 @@ def run(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--slide_dir', type=str, default='/slide_dir')
-    parser.add_argument('--save_dir', type=str, default='/save_dir')
-    parser.add_argument('--exist_ok', action='store_true', default=False)
+    # parser.add_argument('--slide_dir', type=str, default='/slide_dir')
+    parser.add_argument('--slide_dir', type=str, default='/home/jupyter-ljh/data/mntdata/data0/LI_jihao/BRCA_bug/1c4ec716-8a06-4bf9-b113-4bd0c8134c3f/')    
+    # parser.add_argument('--slide_dir', type=str, default='/home/jupyter-ljh/data/mntdata/data0/LIU_shaojun/TCGA-BRCA/WSI/')    
+    # parser.add_argument('--save_dir', type=str, default='/save_dir')
+    parser.add_argument('--save_dir', type=str, default='/home/jupyter-ljh/data/mntdata/data0/LI_jihao/HGCN_BRCA')#如果是~/data则无法识别，不知道放到哪去了
+    # parser.add_argument('--exist_ok', action='store_true', default=False)
+    parser.add_argument('--exist_ok', action='store_true', default=True)
     parser.add_argument('--patch_size', type=int, default=512)
+    # parser.add_argument('--patch_size', type=int, default=128)
     parser.add_argument('--magnification', type=int, default=10, choices=[40, 20, 10, 5])
     parser.add_argument('--scale_factor', type=int, default=32,
                         help="scale wsi to down-sampled image for judging tissue percent of each patch.")

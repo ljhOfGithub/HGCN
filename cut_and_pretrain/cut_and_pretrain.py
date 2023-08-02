@@ -85,7 +85,7 @@ def tiling(slide_filepath, magnification, patch_size, scale_factor=32, tissue_th
         
         
     if overview_dir is not None:
-        thumbnail = slide.get_thumbnail(slide.level_dimensions[overview_level]).convert('RGB')
+        thumbnail = slide.get_thumbnail(slide.level_dimensions[overview_level]).convert('RGB')#缩略图
         thumbnail = cv2.cvtColor(np.asarray(thumbnail), cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(thumbnail_dir / f'{filename}.png'), thumbnail)
     else:

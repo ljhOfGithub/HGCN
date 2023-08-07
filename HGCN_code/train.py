@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import copy
 import torch
 import joblib
@@ -22,7 +22,11 @@ from sklearn.model_selection import StratifiedKFold
 from mae_model import fusion_model_mae_2
 from util import Logger, get_patients_information,get_all_ci,get_val_ci,adjust_learning_rate
 from mae_utils import generate_mask
-
+# print("Python Version:", sys.version)
+# print("Python Version Info:", sys.version_info)
+# from torch.utils.collect_env import main
+# print(main())
+os.system("conda activate hgcn")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -44,11 +48,11 @@ def prediction(all_data,v_model,val_id,patient_and_time,patient_sur_type,args):
 
             graph = all_data[id].to(device)
             if args.train_use_type != None:
-                use_type_eopch = args.train_use_type#选择模态
+                use_type_eopch = args.train_use_type
             else:
                 use_type_eopch = graph.data_type
             out_pre,out_fea,out_att,_ = v_model(graph,args.train_use_type,use_type_eopch,mix=args.mix)
-            lbl_pred = out_pre[0]#lbl表示label
+            lbl_pred = out_pre[0]
 
             survtime_all.append(patient_and_time[id])
             status_all.append(patient_sur_type[id])
@@ -89,7 +93,7 @@ def prediction(all_data,v_model,val_id,patient_and_time,patient_sur_type,args):
     return loss.item(), val_ci_, val_ci_img_, val_ci_rna_, val_ci_cli_
     
         
-def _neg_partial_log(prediction, T, E):#负部分对数似然
+def _neg_partial_log(prediction, T, E):
 
     current_batch_len = len(prediction)
     R_matrix_train = np.zeros([current_batch_len, current_batch_len], dtype=int)
@@ -98,15 +102,21 @@ def _neg_partial_log(prediction, T, E):#负部分对数似然
             R_matrix_train[i, j] = T[j] >= T[i]
 
     train_R = torch.FloatTensor(R_matrix_train)
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # print(torch.cuda.device_count())
+    # print(torch.cuda.is_available())
+    # print(device)
+    # print("test")
     train_R = train_R.cuda()
-
+    # train_R = train_R.to(device)
     train_ystatus = torch.tensor(np.array(E),dtype=torch.float).to(device)
 
     theta = prediction.reshape(-1)
 
     exp_theta = torch.exp(theta)
     loss_nn = - torch.mean((theta - torch.log(torch.sum(exp_theta * train_R, dim=1))) * train_ystatus)
-    #论文中的7
+
     return loss_nn 
 
 
@@ -149,7 +159,7 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
     train_pre_time_cli = {}
     
     all_loss = 0.0 
-    mes_loss_of_mae = nn.MSELoss()#设置均方误差函数
+    mes_loss_of_mae = nn.MSELoss()
 
     
     mse_loss_of_mae = 0.0
@@ -207,7 +217,7 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
                     lbl_pred_img_each = out_pre[1][use_type_eopch.index('img')]
                 else:
                     lbl_pred_img_each = torch.cat([lbl_pred_img_each, out_pre[1][use_type_eopch.index('img')]])
-            if 'rna' in use_type_eopch and len(args.train_use_type) != 1:#不止rna一种
+            if 'rna' in use_type_eopch and len(args.train_use_type) != 1:
                 train_pre_time_rna[id] = out_pre[1][use_type_eopch.index('rna')].cpu().detach().numpy()
                 survtime_rna.append(patient_and_time[id])
                 status_rna.append(patient_sur_type[id])            
@@ -371,10 +381,15 @@ def main(args):
 
   
     if cancer_type == 'lihc': 
-        patients = joblib.load('your path')
-        sur_and_time = joblib.load('your path')
-        all_data=joblib.load('your path')        
-        seed_fit_split = joblib.load('your path')
+        # patients = joblib.load('your path')
+        # sur_and_time = joblib.load('your path')
+        # all_data=joblib.load('your path')        
+        # seed_fit_split = joblib.load('your path')
+        patients = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/LIHC/lihc_patients.pkl')
+        sur_and_time = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/LIHC/lihc_sur_and_time.pkl')
+        all_data=joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/LIHC/lihc_data.pkl')        
+        seed_fit_split = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/LIHC/lihc_split.pkl')
+        
     elif cancer_type == 'lusc': 
         patients = joblib.load('your path')
         sur_and_time = joblib.load('your path')
@@ -472,7 +487,7 @@ def main(args):
                                dropout=drop_out_ratio,
                                train_type_num = len(args.train_use_type)
                                       ).to(device)
-                #设置训练模型，用于prediction()
+
             optimizer=Adam(model.parameters(),lr=lr,weight_decay=5e-4)
 
             
@@ -574,7 +589,8 @@ def main(args):
             print('all ci:',test_ci)
 
 
-            torch.save(t_model.state_dict(), 'your path'+sys_time.strftime('%Y-%m-%d')+label+'_'+str(seed)+'_'+str(n_fold)+'.pth')
+            # torch.save(t_model.state_dict(), 'your path'+sys_time.strftime('%Y-%m-%d')+label+'_'+str(seed)+'_'+str(n_fold)+'.pth')
+            torch.save(t_model.state_dict(), '/home/jupyter-ljh/data/mydata/HGCN-main/result/'+sys_time.strftime('%Y-%m-%d')+label+'_'+str(seed)+'_'+str(n_fold)+'.pth')
             del model, train_data, test_data, t_model
             
 
@@ -613,8 +629,10 @@ def main(args):
             print(fold_[type_name])
 
 
-    joblib.dump(all_gnn_time,'your path'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
-    joblib.dump(all_each_model_time,'your path'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
+    # joblib.dump(all_gnn_time,'your path'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
+    joblib.dump(all_gnn_time,'/home/jupyter-ljh/data/mydata/HGCN-main/result/'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
+    # joblib.dump(all_each_model_time,'your path'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
+    joblib.dump(all_each_model_time,'/home/jupyter-ljh/data/mydata/HGCN-main/result/'+sys_time.strftime('%Y-%m-%d-%H-%M')+label+'.pkl')
     
 def get_params():
     parser = argparse.ArgumentParser()

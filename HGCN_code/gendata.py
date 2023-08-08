@@ -72,6 +72,7 @@ from https://www.gsea-msigdb.org/gsea/msigdb/gene_families.jsp?ex=1
 #             tmp.append(u)  
 #         rna_fea_1024[x]= tmp
 
+
 '''
 ttt_cli_feas contains the clinical records, 
 discrete values give different numerical values, e.g 'male': 0 , 'female':1

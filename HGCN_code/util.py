@@ -25,6 +25,8 @@ def get_val_ci(pre_time,patient_and_time,patient_sur_type):
         ordered_pred_time.append(pre_time[x]*-1)
         ordered_observed.append(patient_sur_type[x])
 #     print(len(ordered_time), len(ordered_pred_time), len(ordered_observed))
+    import pdb
+    # pdb.set_trace()
     return ci(ordered_time, ordered_pred_time, ordered_observed)
     
 

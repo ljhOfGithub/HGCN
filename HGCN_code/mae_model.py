@@ -64,28 +64,24 @@ class my_GlobalAttention(torch.nn.Module):
     
 def trunc_normal_(tensor, mean=0., std=1.):
     __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
-    #对张量进行截断正态分布初始化，均值为 mean，标准差为 std，范围限制在 [-std, std]
-class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编码器
+    
+class PretrainVisionTransformerEncoder(nn.Module):
     """ Vision Transformer with support for patch or hybrid CNN input stage
-    视觉transformer支持patch或混合CNN输入阶段
     """
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=0, embed_dim=512, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None,
                  use_learnable_pos_emb=False,train_type_num=3):
-        #在自然语言处理中，Transformer 网络使用位置编码来帮助模型处理序列数据的位置信息。位置编码通常是一个固定的向量，其维度与输入序列的特征维度相同。在训练过程中，位置编码不会发生变化。
-        #而当 use_learnable_pos_emb 设置为 True 时，位置编码是可学习的，也就是说它的参数会在训练过程中被优化调整。这样做的好处是，模型可以根据数据自动学习到更适合任务的位置编码，而不是使用固定的编码。
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-#与其他模型维度保持一致
+
 #         self.patch_embed = PatchEmbed(
 #             img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
 #         num_patches = self.patch_embed.num_patches
 
         self.patch_embed = nn.Linear(embed_dim,embed_dim)
-        #nn.Linear 是 PyTorch 中用于创建全连接层的类。它将输入张量的每个元素与权重矩阵相乘，并加上偏置项，生成输出张量。
-        num_patches = train_type_num#模态数
+        num_patches = train_type_num
 
         # TODO: Add the cls token
         # self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -96,23 +92,20 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
             self.pos_embed = get_sinusoid_encoding_table(num_patches, embed_dim)
 
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        #最终，列表 dpr 就包含了从 0 到 drop_path_rate 的 depth 个均匀间隔的数值。这个列表可能用于后续的操作，例如在 Stochastic Depth 算法中使用，用于控制网络中某些层的丢弃概率。
         self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer,
                 init_values=init_values)
             for i in range(depth)])
-        #通过使用 nn.ModuleList，我们可以将多个自注意力块堆叠在一起，并按顺序调用它们来构建一个深度的自注意力模型。
         self.norm =  norm_layer(embed_dim)
-        #在这里，self.norm 的作用是对输入特征进行规范化，确保输入特征具有统一的分布和范围。
         self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-        #self.head 作为网络的输出层，根据 num_classes 的取值，可能是一个用于分类的线性层，也可能是一个恒等映射。
+
         if use_learnable_pos_emb:
             trunc_normal_(self.pos_embed, std=.02)
 
         # trunc_normal_(self.cls_token, std=.02)
-        self.apply(self._init_weights)#对所有子模块调用初始化函数
+        self.apply(self._init_weights)
 
 
     def _init_weights(self, m):
@@ -123,7 +116,6 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-    #这个函数通过遍历网络的所有子模块 m，检查是否为线性层 (nn.Linear) 或 Layer Normalization 层 (nn.LayerNorm)，然后分别对其进行不同的初始化操作。        
 
     def get_num_layers(self):
         return len(self.blocks)
@@ -131,27 +123,29 @@ class PretrainVisionTransformerEncoder(nn.Module):#预训练视觉transformer编
     @torch.jit.ignore
     def no_weight_decay(self):
         return {'pos_embed', 'cls_token'}
-    #在这段代码中，no_weight_decay 是一个自定义的方法，用于返回不参与权重衰减（Weight Decay）的参数名称集合。
+
     def get_classifier(self):
         return self.head
 
     def reset_classifier(self, num_classes, global_pool=''):
         self.num_classes = num_classes
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-    #用于重新设置模型的分类器（head）。head 是模型的一个属性，它表示模型的分类器层。
+
     def forward_features(self, x, mask):
+        import pdb
+        pdb.set_trace()
         x = self.patch_embed(x)
         
         # cls_tokens = self.cls_token.expand(batch_size, -1, -1) 
         # x = torch.cat((cls_tokens, x), dim=1)
         x = x + self.pos_embed.type_as(x).to(x.device).clone().detach()
-        #self.pos_embed.type_as(x).to(x.device).clone().detach() 得到一个新的位置编码矩阵，它与输入特征张量 x 数据类型一致且不具有梯度。然后，这个位置编码矩阵会与输入特征张量 x 相加，用于在输入特征中添加位置信息。
+
         B, _, C = x.shape
         x_vis = x[~mask].reshape(B, -1, C) # ~mask means visible
-        #目的是将原始张量 x 中被掩码 mask 选择出来的元素重新整理成一个新的三维张量
+
         for blk in self.blocks:
             x_vis = blk(x_vis)
-        #通过不断遍历 self.blocks 中的超图块，我们可以将输入的超图特征进行多次变换和处理，从而得到更丰富和有意义的特征表示。
+
         x_vis = self.norm(x_vis)
         return x_vis
 
@@ -294,7 +288,7 @@ class PretrainVisionTransformer(nn.Module):
         self.pos_embed = get_sinusoid_encoding_table(train_type_num, decoder_embed_dim)
 
         trunc_normal_(self.mask_token, std=.02)
-    #该代码定义了一个包含编码器和解码器的视觉预训练模型，用于图像生成任务。编码器负责将图像编码为特征表示，解码器负责根据特征表示生成图像预测结果，并使用位置嵌入和掩码标记来帮助模型生成准确的图像预测结果。
+
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -340,8 +334,7 @@ class PretrainVisionTransformer(nn.Module):
                 tmp_x[:,i] = x[:,Truth_n]
                 Truth_n += 1
         return tmp_x
-    #这个前向传播过程的目的是使用预训练的视觉 Transformer 模型对具有遮挡信息的图像进行重建。
-    #它通过 Encoder 编码可见部分的信息，并使用 Decoder 生成遮挡部分的预测。最后，通过重建过程，将预测的遮挡部分插入到正确的位置，得到完整的输出序列。
+
 
 
 def Mix_mlp(dim1):
@@ -359,7 +352,7 @@ class MixerBlock(nn.Module):
         self.mix_mip_1 = Mix_mlp(dim1)
         self.mix_mip_2 = Mix_mlp(dim2)
         
-    def forward(self,x): #对应伪代码12-13行
+    def forward(self,x): 
         
         y = self.norm(x)
         y = y.transpose(0,1)
@@ -412,7 +405,7 @@ class fusion_model_mae_2(nn.Module):
     def __init__(self,in_feats,n_hidden,out_classes,dropout=0.3,train_type_num=3):
         super(fusion_model_mae_2,self).__init__() 
 
-        self.img_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes) #对应伪代码2-4行        
+        self.img_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes)         
         self.img_relu_2 = GNN_relu_Block(out_classes)  
         self.rna_gnn_2 = SAGEConv(in_channels=in_feats,out_channels=out_classes)          
         self.rna_relu_2 = GNN_relu_Block(out_classes)      
@@ -421,7 +414,7 @@ class fusion_model_mae_2(nn.Module):
 #         TransformerConv
 
         att_net_img = nn.Sequential(nn.Linear(out_classes, out_classes//4), nn.ReLU(), nn.Linear(out_classes//4, 1))        
-        self.mpool_img = my_GlobalAttention(att_net_img)#对应伪代码6-8行，使用softmax和mlp处理节点特征
+        self.mpool_img = my_GlobalAttention(att_net_img)
 
         att_net_rna = nn.Sequential(nn.Linear(out_classes, out_classes//4), nn.ReLU(), nn.Linear(out_classes//4, 1))        
         self.mpool_rna = my_GlobalAttention(att_net_rna)        
@@ -442,8 +435,7 @@ class fusion_model_mae_2(nn.Module):
         
         
         self.mae = PretrainVisionTransformer(encoder_embed_dim=out_classes, decoder_num_classes=out_classes, decoder_embed_dim=out_classes, encoder_depth=1,decoder_depth=1,train_type_num=train_type_num)
-        #对应伪代码第10行
-        self.mix = MixerBlock(train_type_num, out_classes)#对应伪代码12-14行，使用转置，mlp，layernorm处理超边矩阵
+        self.mix = MixerBlock(train_type_num, out_classes)
         
         self.lin1_img = torch.nn.Linear(out_classes,out_classes//4)
         self.lin2_img = torch.nn.Linear(out_classes//4,1)        
@@ -457,8 +449,7 @@ class fusion_model_mae_2(nn.Module):
         self.norm_cli = LayerNorm(out_classes//4)
         self.relu = torch.nn.ReLU() 
         self.dropout=nn.Dropout(p=dropout)
-#该模型的主要结构是由图神经网络（GNN）和预训练的视觉Transformer组成，并通过全局注意力机制和混合块来融合不同的模态信息。
-#同时，该模型还包含线性层、层标准化层和ReLU激活函数等组件，用于增强网络的表现和泛化能力。最终，该模型可用于处理多模态数据，并进行融合和特征提取，以适用于医疗影像识别等任务。
+
 
     def forward(self,all_thing,train_use_type=None,use_type=None,in_mask=[],mix=False):
 
@@ -469,40 +460,38 @@ class fusion_model_mae_2(nn.Module):
 
         data_type = use_type
         x_img = all_thing.x_img
-        x_rna = all_thing.x_rna
-        x_cli = all_thing.x_cli
-        #提取多模态节点数据
+        # x_rna = all_thing.x_rna
+        # x_cli = all_thing.x_cli
+
         data_id=all_thing.data_id
         edge_index_img=all_thing.edge_index_image
-        edge_index_rna=all_thing.edge_index_rna
-        edge_index_cli=all_thing.edge_index_cli
-        #提取多模态超边数据
+        # edge_index_rna=all_thing.edge_index_rna
+        # edge_index_cli=all_thing.edge_index_cli
+
         
         save_fea = {}
-        fea_dict = {}#存储特征数据
+        fea_dict = {}
         num_img = len(x_img)
-        num_rna = len(x_rna)
-        num_cli = len(x_cli)      
-               
+        # num_rna = len(x_rna)
+        # num_cli = len(x_cli)      
+        
             
-        att_2 = []#存储注意力分数
-        pool_x = torch.empty((0)).to(device)#存储池化后的数据
-        #这行代码创建了一个空的张量pool_x，并将其设备类型设置为当前设备（GPU或CPU）。
-        #torch.empty((0))创建一个形状为(0,)的张量，其中没有元素。这里使用(0,)表示张量没有任何元素。
+        att_2 = []
+        pool_x = torch.empty((0)).to(device)
+        import pdb
+        # pdb.set_trace()
         if 'img' in data_type:
             x_img = self.img_gnn_2(x_img,edge_index_img) 
             x_img = self.img_relu_2(x_img)   
             batch = torch.zeros(len(x_img),dtype=torch.long).to(device)
-            #创建长度为len(x_img)的全零Tensorbatch，用于存储每个节点所属的batch信息。
-            #这个零张量的目的是为了在后续计算中用于指定每个数据点所属的批次(batch)。在深度学习中，通常将数据分成小批次(batch)进行处理，这有助于加速计算和优化模型。在这里，batch张量将被用作一个标记，表示所有的x_img数据点都属于同一个批次。
-            #这样做是为了将整个x_img张量作为一个批次输入到my_GlobalAttention层中，以计算全局注意力。在计算过程中，每个数据点都会被分配一个与其对应的批次标记，以便进行全局注意力的计算。
+            import pdb
+            # pdb.set_trace()
             pool_x_img,att_img_2 = self.mpool_img(x_img,batch)
-            #对图像数据进行全局注意力池化操作，将池化后的结果存储在变量pool_x_img中。
-            #att_img_2是一个与x_img数据点数量相同的张量，表示每个数据点在全局注意力中的重要性。
             att_2.append(att_img_2)
-            pool_x = torch.cat((pool_x,pool_x_img),0)#对应伪代码15-17行
-            #将pool_x_img张量与之前的pool_x张量在维度0上进行拼接（合并）操作
+            pool_x = torch.cat((pool_x,pool_x_img),0)
         if 'rna' in data_type:
+            import pdb
+            pdb.set_trace()
             x_rna = self.rna_gnn_2(x_rna,edge_index_rna) 
             x_rna = self.rna_relu_2(x_rna)   
             batch = torch.zeros(len(x_rna),dtype=torch.long).to(device)
@@ -517,14 +506,13 @@ class fusion_model_mae_2(nn.Module):
             att_2.append(att_cli_2)
             pool_x = torch.cat((pool_x,pool_x_cli),0)
         
-        fea_dict['mae_labels'] = pool_x#这是最终完整的模态间信息
-        #将特征数据pool_x存储在字典fea_dict中，键为mae_labels。
+        fea_dict['mae_labels'] = pool_x
+
 
         if len(train_use_type)>1:
-            #在该代码段中，首先检查train_use_type中是否有多个数据类型（图像、RNA或CLI）。
-            #如果有多个数据类型，那么分别处理每个数据类型。
             if use_type == train_use_type:
-                #如果当前处理的use_type与train_use_type相同，意味着当前处理的数据类型与训练数据类型一致
+                import pdb
+                # pdb.set_trace()
                 mae_x = self.mae(pool_x,mask).squeeze(0)
                 fea_dict['mae_out'] = mae_x
             else:
@@ -580,7 +568,7 @@ class fusion_model_mae_2(nn.Module):
             pool_x_cli,att_cli_3 = self.mpool_cli_2(x_cli,batch)
             att_3.append(att_cli_3)
             pool_x = torch.cat((pool_x,pool_x_cli),0) 
-        #经过三个my_GlobalAttention模块的处理后，pool_x中保存了三个数据类型对应的处理后的特征。同时，att_3列表中存储了这三个数据类型对应的注意力权重。    
+            
 
         
         x = pool_x
@@ -610,7 +598,7 @@ class fusion_model_mae_2(nn.Module):
             x_img = self.dropout(x_img)    
 
             x_img = self.lin2_img(x_img).unsqueeze(0) 
-            multi_x = torch.cat((multi_x,x_img),0)#对应伪代码19-21行
+            multi_x = torch.cat((multi_x,x_img),0)
             k+=1
         if 'rna' in data_type:
             x_rna = self.lin1_rna(x[k])
@@ -630,7 +618,16 @@ class fusion_model_mae_2(nn.Module):
             x_cli = self.lin2_rna(x_cli).unsqueeze(0) 
             multi_x = torch.cat((multi_x,x_cli),0)  
             k+=1  
-        one_x = torch.mean(multi_x,dim=0)#对应伪代码23行
-    #通过torch.mean函数在第0维上对multi_x进行求平均，得到最终的特征one_x。此时，one_x中包含了在输入数据x的不同数据类型上进行线性变换和池化后的特征。
+        one_x = torch.mean(multi_x,dim=0)
+   
         return (one_x,multi_x),save_fea,(att_2,att_3),fea_dict  
-#综上所述，该fusion_model_mae_2模型中的forward函数实现了对多模态输入数据的融合和特征提取，并得到最终的全局融合特征，用于后续的任务。
+
+
+
+
+
+
+
+
+
+

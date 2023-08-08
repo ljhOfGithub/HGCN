@@ -135,7 +135,7 @@ def setup_seed(seed):
 def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,batch_size,optimizer,epoch,format_of_coxloss,args):
     model.train() 
 
-
+    # all_data = Data.from_dict(all_data)
     lbl_pred_each = None
     lbl_pred_img_each = None
     lbl_pred_rna_each = None
@@ -188,6 +188,8 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
                 num_of_model = len(use_type_eopch)                
             else:
                 use_type_eopch = all_data[id].data_type
+            import pdb
+            # pdb.set_trace()
             graph = all_data[id].to(device)
             out_pre,out_fea,out_att,fea_dict = model(graph,use_type_eopch,use_type_eopch,mask,mix=args.mix)
             lbl_pred = out_pre[0]
@@ -270,7 +272,9 @@ def train_a_epoch(model,train_data,all_data,patient_and_time,patient_sur_type,ba
 
             if format_of_coxloss == 'one':
                 all_loss_surv = _neg_partial_log(lbl_pred_each, survtime_all, status_all)
-                loss_surv = args.all_cox_loss_factor * all_loss_surv
+                # loss_surv = args.all_cox_loss_factor * all_loss_surv
+                loss_surv = all_loss_surv
+                
             elif format_of_coxloss == 'multi':
                 if lbl_pred_img_each != None:
                     img_loss_surv = args.img_cox_loss_factor * _neg_partial_log(lbl_pred_img_each, survtime_img, status_img)
@@ -415,6 +419,19 @@ def main(args):
         sur_and_time = joblib.load('your path')
         all_data=joblib.load('your path')             
         seed_fit_split = joblib.load('your path')
+    elif cancer_type == 'brca': 
+        patients = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/patients.pkl')
+        sur_and_time = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/sur_and_time.pkl')
+        import pdb
+        # pdb.set_trace()
+        # all_data=joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/all_data.pkl')
+        # all_data = Data.from_dict(all_data.__dict__)
+        # all_data = Data.from_dict(all_data)
+        # all_data = Data(**all_data.__dict__)
+        all_data = torch.load('/home/jupyter-ljh/data/mydata/HGCN-main/all_data.pt')
+        all_data = Data.from_dict(all_data)
+        seed_fit_split = joblib.load('/home/jupyter-ljh/data/mydata/HGCN-main/split.pkl')
+    
 
     patient_sur_type, patient_and_time, kf_label = get_patients_information(patients,sur_and_time)
 
@@ -566,24 +583,26 @@ def main(args):
                             (one_,_),one_fea,(_,_),_ = t_model(data,args.train_use_type,use_type=[type_name],mix=args.mix)
                             one_model_res[i][id] = one_.cpu().detach().numpy()[0]
                             each_model_time[type_name][id] = one_.cpu().detach().numpy()[0]
-
-                    for i,two_type_name in enumerate([['img','rna'],['img','cli'],['rna','cli']]):
-                        (one_,two_),one_fea,(_,_),_ = t_model(data,args.train_use_type,use_type=two_type_name,mix=args.mix)
-                        two_model_res[i][id] = one_.cpu().detach().numpy()[0]
-                        cat_name = two_type_name[0]+two_type_name[1]
-                        each_model_time[cat_name][id] = one_.cpu().detach().numpy()[0]     
+                    #这里没有rna也会运行，添加条件
+                    if len(args.train_use_type) == 3:
+                        for i,two_type_name in enumerate([['img','rna'],['img','cli'],['rna','cli']]):
+                            (one_,two_),one_fea,(_,_),_ = t_model(data,args.train_use_type,use_type=two_type_name,mix=args.mix)
+                            two_model_res[i][id] = one_.cpu().detach().numpy()[0]
+                            cat_name = two_type_name[0]+two_type_name[1]
+                            each_model_time[cat_name][id] = one_.cpu().detach().numpy()[0]     
 
                     del data        
-            for i,type_name in enumerate(['img','rna','cli']): 
+            # for i,type_name in enumerate(['img','rna','cli']): 
+            for i,type_name in enumerate(args.train_use_type): 
                 t_ci = get_val_ci(one_model_res[i],patient_and_time,patient_sur_type)
                 test_each_model_ci[type_name].append(t_ci)
                 print(len(one_model_res[i]),' ',type_name,' ci:',t_ci)
-                
-            for i,type_name in enumerate([['img','rna'],['img','cli'],['rna','cli']]): 
-                t_ci = get_val_ci(two_model_res[i],patient_and_time,patient_sur_type)
-                cat_name = type_name[0]+type_name[1]
-                test_each_model_ci[cat_name].append(t_ci)
-                print(len(two_model_res[i]),' ',cat_name,' ci:',t_ci)                
+            if len(args.train_use_type) == 3:
+                for i,type_name in enumerate([['img','rna'],['img','cli'],['rna','cli']]): 
+                    t_ci = get_val_ci(two_model_res[i],patient_and_time,patient_sur_type)
+                    cat_name = type_name[0]+type_name[1]
+                    test_each_model_ci[cat_name].append(t_ci)
+                    print(len(two_model_res[i]),' ',cat_name,' ci:',t_ci)                
                 
             test_ci = get_val_ci(fold_fusion_test_ci,patient_and_time,patient_sur_type)
             print('all ci:',test_ci)
@@ -640,16 +659,20 @@ def get_params():
     parser.add_argument("--img_cox_loss_factor", type=float, default=5, help="img_cox_loss_factor")
     parser.add_argument("--rna_cox_loss_factor", type=float, default=1, help="rna_cox_loss_factor")
     parser.add_argument("--cli_cox_loss_factor", type=float, default=5, help="cli_cox_loss_factor")
-    parser.add_argument("--train_use_type", type=list, default=['img','rna','cli'], help='train_use_type,Please keep the relative order of img, rna, cli')
-    parser.add_argument("--format_of_coxloss", type=str, default="multi", help="format_of_coxloss:multi,one")
-    parser.add_argument("--add_mse_loss_of_mae", action='store_true', default=True, help="add_mse_loss_of_mae")
+    # parser.add_argument("--train_use_type", type=list, default=['img','rna','cli'], help='train_use_type,Please keep the relative order of img, rna, cli')
+    parser.add_argument("--train_use_type", type=list, default=['img'], help='train_use_type,Please keep the relative order of img, rna, cli')
+    # parser.add_argument("--format_of_coxloss", type=str, default="multi", help="format_of_coxloss:multi,one")
+    parser.add_argument("--format_of_coxloss", type=str, default="one", help="format_of_coxloss:multi,one")
+    # parser.add_argument("--add_mse_loss_of_mae", action='store_true', default=True, help="add_mse_loss_of_mae")
+    parser.add_argument("--add_mse_loss_of_mae", action='store_true', default=False, help="add_mse_loss_of_mae")
     parser.add_argument("--mse_loss_of_mae_factor", type=float, default=5, help="mae_loss_factor")
     parser.add_argument("--start_seed", type=int, default=0, help="start_seed")
     parser.add_argument("--repeat_num", type=int, default=5, help="Number of repetitions of the experiment")
     parser.add_argument("--fusion_model", type=str, default="fusion_model_mae_2", help="")
     parser.add_argument("--drop_out_ratio", type=float, default=0.5, help="Drop_out_ratio")
     parser.add_argument("--lr", type=float, default=0.00003, help="Learning rate of model training")
-    parser.add_argument("--epochs", type=int, default=60, help="Cycle times of model training")
+    # parser.add_argument("--epochs", type=int, default=60, help="Cycle times of model training")
+    parser.add_argument("--epochs", type=int, default=3, help="Cycle times of model training")#必须设置大于2，上面549有报错
     parser.add_argument("--batch_size", type=int, default=32, help="Data volume of model training once")
     parser.add_argument("--n_hidden", type=int, default=512, help="Model middle dimension")    
     parser.add_argument("--out_classes", type=int, default=512, help="Model out dimension")
